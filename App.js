@@ -1,20 +1,100 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState, useEffect } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+
+import LoginScreen from './screens/LoginScreen';
+import RegisterScreen from './screens/RegisterScreen';
+import RemindersScreen from './screens/RemindersScreen';
+import AddReminderScreen from './screens/AddReminderScreen';
+import ReminderDetailsScreen from './screens/ReminderDetailsScreen';
+
+import { getReminders, addReminder, updateReminder, deleteReminder } from './services/reminderService';
+
+const Stack = createStackNavigator();
+
+// Simulated users for the sharing feature
+export const USERS = [
+  { id: '1', name: 'Alice' },
+  { id: '2', name: 'Bob' },
+  { id: '3', name: 'Carol' },
+];
 
 export default function App() {
+  const [reminders, setReminders] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+
+  useEffect(() => {
+    if (currentUser) {
+      loadReminders();
+    }
+  }, [currentUser]);
+
+  async function loadReminders() {
+    setLoadingReminders(true);
+    const data = await getReminders();
+    setReminders(data);
+    setLoadingReminders(false);
+  }
+
+  async function handleAddReminder(reminder) {
+    await addReminder(reminder);
+    await loadReminders();
+  }
+
+  async function handleUpdateReminder(id, updatedReminder) {
+    await updateReminder(id, updatedReminder);
+    await loadReminders();
+  }
+
+  async function handleDeleteReminder(id) {
+    await deleteReminder(id);
+    await loadReminders();
+  }
+
+  function handleLogin(user) {
+    setCurrentUser(user);
+  }
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.js to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login">
+          {(props) => <LoginScreen {...props} onLogin={handleLogin} />}
+        </Stack.Screen>
+        <Stack.Screen name="Register">
+          {(props) => <RegisterScreen {...props} onLogin={handleLogin} />}
+        </Stack.Screen>
+        <Stack.Screen name="Reminders">
+          {(props) => (
+            <RemindersScreen
+              {...props}
+              reminders={reminders}
+              currentUser={currentUser}
+              loading={loadingReminders}
+            />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="AddReminder" options={{ title: 'Add Reminder' }}>
+          {(props) => (
+            <AddReminderScreen
+              {...props}
+              currentUser={currentUser}
+              onAdd={handleAddReminder}
+            />
+          )}
+        </Stack.Screen>
+        <Stack.Screen name="ReminderDetails" options={{ title: 'Reminder Details' }}>
+          {(props) => (
+            <ReminderDetailsScreen
+              {...props}
+              currentUser={currentUser}
+              onUpdate={handleUpdateReminder}
+              onDelete={handleDeleteReminder}
+            />
+          )}
+        </Stack.Screen>
+      </Stack.Navigator>
+    </NavigationContainer>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
