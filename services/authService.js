@@ -1,4 +1,5 @@
 import { API_KEY } from '../firebaseConfig';
+import { saveUser } from './userService';
 
 const AUTH_URL = 'https://identitytoolkit.googleapis.com/v1/accounts';
 
@@ -15,7 +16,6 @@ const ERROR_MESSAGES = {
 };
 
 function friendlyError(code) {
-  // Firebase sometimes appends extra detail after a space or colon
   const key = (code || '').split(' ')[0].split(':')[0];
   return ERROR_MESSAGES[key] || 'Something went wrong. Please try again.';
 }
@@ -28,6 +28,9 @@ export async function register(email, password) {
   });
   const data = await response.json();
   if (data.error) throw new Error(friendlyError(data.error.message));
+  await saveUser(data.localId, data.email.toLowerCase()).catch((e) => {
+    console.warn('[register] saveUser failed:', e);
+  });
   return { id: data.localId, email: data.email };
 }
 

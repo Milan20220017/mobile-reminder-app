@@ -56,14 +56,34 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login">
+      <Stack.Navigator
+        initialRouteName="Login"
+        screenOptions={{
+          headerStyle: {
+            backgroundColor: '#fff',
+            elevation: 0,
+            shadowOpacity: 0,
+            borderBottomWidth: 1,
+            borderBottomColor: '#F3F4F6',
+          },
+          headerTintColor: '#4A90D9',
+          headerTitleStyle: {
+            fontWeight: '700',
+            fontSize: 17,
+            color: '#1A1A2E',
+          },
+          headerBackTitleVisible: false,
+        }}
+      >
+        <Stack.Screen name="Login" options={{ headerShown: false }}>
           {(props) => <LoginScreen {...props} onLogin={handleLogin} />}
         </Stack.Screen>
-        <Stack.Screen name="Register">
+
+        <Stack.Screen name="Register" options={{ headerShown: false }}>
           {(props) => <RegisterScreen {...props} onLogin={handleLogin} />}
         </Stack.Screen>
-        <Stack.Screen name="Reminders">
+
+        <Stack.Screen name="Reminders" options={{ headerShown: false }}>
           {(props) => (
             <RemindersScreen
               {...props}
@@ -74,7 +94,8 @@ export default function App() {
             />
           )}
         </Stack.Screen>
-        <Stack.Screen name="AddReminder" options={{ title: 'Add Reminder' }}>
+
+        <Stack.Screen name="AddReminder" options={{ title: 'New Reminder' }}>
           {(props) => (
             <AddReminderScreen
               {...props}
@@ -83,6 +104,7 @@ export default function App() {
             />
           )}
         </Stack.Screen>
+
         <Stack.Screen name="ReminderDetails" options={{ title: 'Reminder Details' }}>
           {(props) => (
             <ReminderDetailsScreen
