@@ -12,7 +12,6 @@ import { getReminders, addReminder, updateReminder, deleteReminder } from './ser
 
 const Stack = createStackNavigator();
 
-// Simulated users for the sharing feature
 export const USERS = [
   { id: '1', name: 'Alice' },
   { id: '2', name: 'Bob' },

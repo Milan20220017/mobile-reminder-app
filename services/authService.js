@@ -1,9 +1,9 @@
-import { FIREBASE_API_KEY } from '../firebaseConfig';
+import { API_KEY } from '../firebaseConfig';
 
 const AUTH_URL = 'https://identitytoolkit.googleapis.com/v1/accounts';
 
 export async function register(email, password) {
-  const response = await fetch(`${AUTH_URL}:signUp?key=${FIREBASE_API_KEY}`, {
+  const response = await fetch(`${AUTH_URL}:signUp?key=${API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, returnSecureToken: true }),
@@ -14,7 +14,7 @@ export async function register(email, password) {
 }
 
 export async function login(email, password) {
-  const response = await fetch(`${AUTH_URL}:signInWithPassword?key=${FIREBASE_API_KEY}`, {
+  const response = await fetch(`${AUTH_URL}:signInWithPassword?key=${API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, returnSecureToken: true }),
