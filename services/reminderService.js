@@ -10,11 +10,12 @@ export async function getReminders() {
     ...reminder,
     id,
     sharedWith: reminder.sharedWith ?? [],
+    completedBy: reminder.completedBy ?? {},
   }));
 }
 
 export async function addReminder(reminder) {
-  const response = await fetch(`${BASE_URL}/reminders.json`, {
+  const response = await fetch(`${DATABASE_URL}/reminders.json`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(reminder),

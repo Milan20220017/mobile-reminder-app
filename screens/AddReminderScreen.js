@@ -1,21 +1,14 @@
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import { useState } from 'react';
-import { USERS } from '../App';
 
 export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
-  const [sharedWith, setSharedWith] = useState([]);
+  const [shareEmail, setShareEmail] = useState('');
   const [titleError, setTitleError] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  function toggleShare(userId) {
-    setSharedWith((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
-    );
-  }
 
   async function handleSave() {
     if (!title.trim()) {
@@ -23,13 +16,22 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
       return;
     }
 
+    const sharedWith = shareEmail.trim() ? [shareEmail.trim().toLowerCase()] : [];
+    const ownerEmail = currentUser.email;
+
+    const completedBy = { [ownerEmail]: false };
+    for (const email of sharedWith) {
+      completedBy[email] = false;
+    }
+
     const newReminder = {
       title: title.trim(),
       description: description.trim(),
       date: date.trim(),
-      completed: false,
       ownerId: currentUser.id,
+      ownerEmail,
       sharedWith,
+      completedBy,
     };
 
     try {
@@ -42,8 +44,6 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
       setLoading(false);
     }
   }
-
-  const otherUsers = USERS.filter((u) => u.id !== currentUser.id);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -75,23 +75,16 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
         placeholderTextColor="#999"
       />
 
-      <Text style={styles.label}>Share with</Text>
-      <View style={styles.userRow}>
-        {otherUsers.map((user) => {
-          const selected = sharedWith.includes(user.id);
-          return (
-            <TouchableOpacity
-              key={user.id}
-              style={[styles.userChip, selected && styles.userChipSelected]}
-              onPress={() => toggleShare(user.id)}
-            >
-              <Text style={[styles.userChipText, selected && styles.userChipTextSelected]}>
-                {user.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
+      <Text style={styles.label}>Share with (email)</Text>
+      <TextInput
+        style={styles.input}
+        value={shareEmail}
+        onChangeText={setShareEmail}
+        placeholder="Enter user's email to share"
+        placeholderTextColor="#999"
+        autoCapitalize="none"
+        keyboardType="email-address"
+      />
 
       {loading && <Text style={styles.loading}>Saving...</Text>}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -136,32 +129,6 @@ const styles = StyleSheet.create({
     color: '#E74C3C',
     fontSize: 13,
     marginTop: 4,
-  },
-  userRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
-  },
-  userChip: {
-    paddingVertical: 7,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#C0C0C0',
-    backgroundColor: '#fff',
-  },
-  userChipSelected: {
-    backgroundColor: '#4A90D9',
-    borderColor: '#4A90D9',
-  },
-  userChipText: {
-    color: '#444',
-    fontSize: 14,
-  },
-  userChipTextSelected: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
   loading: {
     textAlign: 'center',

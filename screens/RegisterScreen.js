@@ -8,8 +8,12 @@ export default function RegisterScreen({ navigation, onLogin }) {
   const [error, setError] = useState('');
 
   async function handleRegister() {
+    setError('');
+    if (!email.trim()) { setError('Please enter your email.'); return; }
+    if (!password) { setError('Please enter your password.'); return; }
+    if (password.length < 6) { setError('Password must be at least 6 characters.'); return; }
     try {
-      const user = await register(email, password);
+      const user = await register(email.trim(), password);
       onLogin(user);
       navigation.replace('Reminders');
     } catch (e) {

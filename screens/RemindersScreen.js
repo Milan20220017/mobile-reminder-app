@@ -1,13 +1,23 @@
 import { View, Text, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
-export default function RemindersScreen({ navigation, reminders, currentUser, loading }) {
+export default function RemindersScreen({ navigation, reminders, currentUser, loading, onLogout }) {
   const visibleReminders = reminders.filter(
-    (r) => r.ownerId === currentUser.id || r.sharedWith.includes(currentUser.id)
+    (r) => r.ownerId === currentUser.id || (r.sharedWith || []).includes(currentUser.email)
   );
+
+  function handleLogout() {
+    onLogout();
+    navigation.replace('Login');
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>My Reminders</Text>
+      <View style={styles.header}>
+        <Text style={styles.title}>My Reminders</Text>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
+      </View>
       <Text style={styles.subtitle}>Logged in as {currentUser?.email}</Text>
 
       {loading && <Text style={styles.loading}>Loading reminders...</Text>}
@@ -21,18 +31,20 @@ export default function RemindersScreen({ navigation, reminders, currentUser, lo
         }
         renderItem={({ item }) => {
           const isOwner = item.ownerId === currentUser.id;
+          const completedValues = Object.values(item.completedBy || {});
+          const fullyCompleted = completedValues.length > 0 && completedValues.every(v => v === true);
           return (
             <TouchableOpacity
               style={styles.card}
               onPress={() => navigation.navigate('ReminderDetails', { reminder: item })}
             >
               <View style={styles.cardHeader}>
-                <Text style={[styles.cardTitle, item.completed && styles.completedTitle]}>
+                <Text style={[styles.cardTitle, fullyCompleted && styles.completedTitle]}>
                   {item.title}
                 </Text>
-                <View style={[styles.badge, item.completed ? styles.badgeGreen : styles.badgeOrange]}>
+                <View style={[styles.badge, fullyCompleted ? styles.badgeGreen : styles.badgeOrange]}>
                   <Text style={styles.badgeText}>
-                    {item.completed ? 'Done' : 'Pending'}
+                    {fullyCompleted ? 'Done' : 'Pending'}
                   </Text>
                 </View>
               </View>
@@ -66,11 +78,29 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F6FA',
     padding: 20,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
     color: '#1A1A2E',
-    marginTop: 8,
+  },
+  logoutButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  logoutText: {
+    fontSize: 14,
+    color: '#E74C3C',
+    fontWeight: '600',
   },
   subtitle: {
     fontSize: 13,

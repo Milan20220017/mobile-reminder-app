@@ -12,12 +12,6 @@ import { getReminders, addReminder, updateReminder, deleteReminder } from './ser
 
 const Stack = createStackNavigator();
 
-export const USERS = [
-  { id: '1', name: 'Alice' },
-  { id: '2', name: 'Bob' },
-  { id: '3', name: 'Carol' },
-];
-
 export default function App() {
   const [reminders, setReminders] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -55,6 +49,11 @@ export default function App() {
     setCurrentUser(user);
   }
 
+  function handleLogout() {
+    setCurrentUser(null);
+    setReminders([]);
+  }
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
@@ -71,6 +70,7 @@ export default function App() {
               reminders={reminders}
               currentUser={currentUser}
               loading={loadingReminders}
+              onLogout={handleLogout}
             />
           )}
         </Stack.Screen>

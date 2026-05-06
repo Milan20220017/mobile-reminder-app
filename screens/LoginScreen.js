@@ -8,8 +8,11 @@ export default function LoginScreen({ navigation, onLogin }) {
   const [error, setError] = useState('');
 
   async function handleLogin() {
+    setError('');
+    if (!email.trim()) { setError('Please enter your email.'); return; }
+    if (!password) { setError('Please enter your password.'); return; }
     try {
-      const user = await login(email, password);
+      const user = await login(email.trim(), password);
       onLogin(user);
       navigation.replace('Reminders');
     } catch (e) {
