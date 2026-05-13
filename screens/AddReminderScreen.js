@@ -76,15 +76,20 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      {/* KeyboardAvoidingView is a no-op on web and its flex wrapper can prevent
+          the ScrollView from receiving overflow — disable it on web. */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior="padding"
+        enabled={Platform.OS !== 'web'}
       >
     <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
+      style={styles.scrollView}
+      contentContainerStyle={
+        Platform.OS === 'web' ? styles.contentWeb : styles.contentNative
+      }
       keyboardShouldPersistTaps="handled"
-      showsVerticalScrollIndicator={false}
+      showsVerticalScrollIndicator={Platform.OS === 'web'}
     >
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Details</Text>
@@ -188,8 +193,17 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F0F2F8' },
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#F0F2F8' },
-  content: { flexGrow: 1, padding: 16, paddingBottom: 200 },
+  scrollView: { flex: 1, backgroundColor: '#F0F2F8' },
+
+  contentNative: { flexGrow: 1, padding: 16, paddingBottom: 120 },
+
+  contentWeb: {
+    padding: 16,
+    paddingBottom: 48,
+    width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+  },
 
   card: {
     backgroundColor: '#fff',

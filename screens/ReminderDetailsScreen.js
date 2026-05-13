@@ -50,8 +50,6 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
 
   const myDone = completedBy[currentUser.email] || false;
 
-  // Derived from local state so the badge updates instantly when the user
-  // toggles their own status, before they hit Save.
   const overallStatus = getReminderStatus({ completedBy, date });
 
   function toggleMyStatus() {
@@ -318,12 +316,18 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <KeyboardAvoidingView style={styles.flex} behavior="padding">
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior="padding"
+        enabled={Platform.OS !== 'web'}
+      >
         <ScrollView
-          style={styles.container}
-          contentContainerStyle={styles.content}
+          style={styles.scrollView}
+          contentContainerStyle={
+            Platform.OS === 'web' ? styles.contentWeb : styles.contentNative
+          }
           keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+          showsVerticalScrollIndicator={Platform.OS === 'web'}
         >
           <View style={styles.ownerBadgeRow}>
             <View style={[styles.ownerBadge, isOwner ? styles.ownerBadgeMine : styles.ownerBadgeShared]}>
@@ -369,8 +373,17 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F0F2F8' },
   flex: { flex: 1 },
-  container: { flex: 1, backgroundColor: '#F0F2F8' },
-  content: { padding: 16, paddingBottom: 200, flexGrow: 1 },
+  scrollView: { flex: 1, backgroundColor: '#F0F2F8' },
+
+  contentNative: { flexGrow: 1, padding: 16, paddingBottom: 120 },
+
+  contentWeb: {
+    padding: 16,
+    paddingBottom: 48,
+    width: '100%',
+    maxWidth: 780,
+    alignSelf: 'center',
+  },
 
   ownerBadgeRow: { alignItems: 'flex-start', marginBottom: 14 },
   ownerBadge: { borderRadius: 20, paddingVertical: 5, paddingHorizontal: 14 },

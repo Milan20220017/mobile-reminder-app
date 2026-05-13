@@ -1,4 +1,19 @@
-import * as Notifications from 'expo-notifications';
+// NOTE: expo-notifications is intentionally NOT statically imported here.
+//
+// expo-notifications ships a Metro side-effect file
+// (PushTokenAutoRegistration.fx.js) that runs the instant the module is first
+// require()'d. On Expo Go for Android (SDK 53+) that side effect calls
+// addPushTokenListener, which immediately emits the "remote notifications
+// removed" console error — even if all of our own code is behind a guard.
+//
+// The fix: use a lazy dynamic require() inside each function. Because every
+// function starts with `if (!notificationsAvailable) return`, the require() is
+// never reached in Expo Go on Android, so the module is never loaded and the
+// side effect never fires.
+//
+// In a development build (notificationsAvailable === true) everything works
+// exactly as before — require() is cached after the first call.
+
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
@@ -7,19 +22,13 @@ const NOTIF_KEY_PREFIX = 'notif_';
 
 // ─── Environment detection ────────────────────────────────────────────────────
 //
-// Local scheduled notifications work in:
+// Local notifications work in:
 //   • Development builds  (Android + iOS)
-//   • Expo Go on iOS only (the iOS Expo Go client still includes the local-
-//     notifications native module)
+//   • Expo Go on iOS      (iOS client still includes the module)
 //
 // They do NOT work in:
-//   • Expo Go on Android — the expo-notifications native module was removed
-//     from the Android Expo Go client starting with SDK 53.
+//   • Expo Go on Android  (module removed in SDK 53)
 //   • Web
-//
-// We detect Expo Go via Constants.executionEnvironment === 'storeClient'.
-// All notification code is gated on this flag so the app never touches the
-// missing native module and never crashes or logs the SDK-53 warning.
 
 const isExpoGo =
   Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
@@ -27,11 +36,12 @@ const isExpoGo =
 export const notificationsAvailable =
   Platform.OS !== 'web' && !(Platform.OS === 'android' && isExpoGo);
 
-// Register the foreground display handler only when the native module exists.
-// Calling setNotificationHandler in Expo Go on Android is what triggers the
-// "remote notifications removed" console error, so we guard it here.
+// Register the foreground display handler — only when the module is present.
+// Dynamic require() so the module (and its .fx.js side effects) is never
+// loaded on Expo Go Android.
 if (notificationsAvailable) {
   try {
+    const Notifications = require('expo-notifications');
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -45,19 +55,19 @@ if (notificationsAvailable) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-// Call once on app start. Creates the Android channel and requests permission.
-// Safe no-op when notifications are unavailable.
 
 export async function initNotifications() {
   if (!notificationsAvailable) {
     const reason =
       Platform.OS === 'android' && isExpoGo
         ? 'Expo Go on Android does not support local notifications (SDK 53+). ' +
-          'Switch to a development build for notification support.'
+          'Use a development build for notification support.'
         : 'Notifications are disabled on web.';
     console.log('[Notifications] Skipped —', reason);
     return;
   }
+
+  const Notifications = require('expo-notifications');
 
   if (Platform.OS === 'android') {
     try {
@@ -114,15 +124,11 @@ async function deleteStoredNotifId(reminderId) {
 }
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
-// Schedules a local notification for reminder.date + reminder.time (defaults
-// to 09:00 when time is absent). Cancels any existing notification for the
-// same reminderId first. Silent no-op when notifications are unavailable.
 
 export async function scheduleReminderNotification(reminder) {
   if (!notificationsAvailable) return;
   if (!reminder.id || !reminder.date) return;
 
-  // Always cancel whatever was scheduled before for this reminder.
   await cancelReminderNotification(reminder.id);
 
   const time = reminder.time || '09:00';
@@ -136,6 +142,8 @@ export async function scheduleReminderNotification(reminder) {
   }
 
   try {
+    const Notifications = require('expo-notifications');
+
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       console.log('[Notifications] No permission — notification not scheduled');
@@ -164,9 +172,6 @@ export async function scheduleReminderNotification(reminder) {
   }
 }
 
-// ─── Cancel ───────────────────────────────────────────────────────────────────
-// Cancels the scheduled notification for a reminder and removes the stored ID.
-// Idempotent — safe to call even when no notification exists.
 
 export async function cancelReminderNotification(reminderId) {
   if (!notificationsAvailable || !reminderId) return;
@@ -175,10 +180,10 @@ export async function cancelReminderNotification(reminderId) {
   if (!notifId) return;
 
   try {
+    const Notifications = require('expo-notifications');
     await Notifications.cancelScheduledNotificationAsync(notifId);
     console.log(`[Notifications] Cancelled notifId=${notifId} for reminderId=${reminderId}`);
   } catch (err) {
-    // The notification may have already fired — not fatal.
     console.warn('[Notifications] Cancel warning:', err.message);
   } finally {
     await deleteStoredNotifId(reminderId);

@@ -40,14 +40,12 @@ export default function App() {
   }
 
   async function handleAddReminder(reminder) {
-    // addReminder returns the new Firebase key; pass it as id for notification storage.
     const reminderId = await addReminder(reminder);
     await scheduleReminderNotification({ ...reminder, id: reminderId });
     await loadReminders();
   }
 
   async function handleUpdateReminder(id, updatedReminder) {
-    // cancelReminderNotification is idempotent — safe to call even if no notification exists.
     await cancelReminderNotification(id);
     await updateReminder(id, updatedReminder);
     await scheduleReminderNotification({ ...updatedReminder, id });

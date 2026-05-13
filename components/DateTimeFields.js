@@ -2,7 +2,6 @@ import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react
 import { useState } from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-// ─── Date helpers ────────────────────────────────────────────────────────────
 
 export function toYMD(d) {
   return [
@@ -34,7 +33,6 @@ function formatDateDisplay(str) {
   });
 }
 
-// ─── Time helpers ────────────────────────────────────────────────────────────
 
 export function toHHMM(d) {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -58,7 +56,6 @@ function formatTimeDisplay(str) {
   });
 }
 
-// ─── Web input style (shared) ─────────────────────────────────────────────────
 
 function webInputStyle(editable) {
   return {
@@ -76,9 +73,6 @@ function webInputStyle(editable) {
   };
 }
 
-// ─── DatePickerField ──────────────────────────────────────────────────────────
-// value: 'YYYY-MM-DD' string or ''
-// onChange: (str: 'YYYY-MM-DD') => void
 
 export function DatePickerField({ value, onChange, editable }) {
   const [showPicker, setShowPicker] = useState(false);
@@ -154,9 +148,6 @@ export function DatePickerField({ value, onChange, editable }) {
   );
 }
 
-// ─── TimePickerField ──────────────────────────────────────────────────────────
-// value: 'HH:MM' string or ''
-// onChange: (str: 'HH:MM') => void
 
 export function TimePickerField({ value, onChange, editable }) {
   const [showPicker, setShowPicker] = useState(false);
@@ -230,7 +221,6 @@ export function TimePickerField({ value, onChange, editable }) {
   );
 }
 
-// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   field: {
