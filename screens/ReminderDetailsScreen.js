@@ -1,14 +1,167 @@
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   SafeAreaView, KeyboardAvoidingView, Platform,
-  StyleSheet, Alert, useWindowDimensions, ActivityIndicator,
+  StyleSheet, Alert, useWindowDimensions, ActivityIndicator, Modal,
 } from 'react-native';
 import { useState } from 'react';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { findUserByEmail } from '../services/userService';
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
+
+function toYMD(d) {
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function today() {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function parseYMD(str) {
+  if (!str) return today();
+  const [y, m, day] = str.split('-').map(Number);
+  const d = new Date(y, m - 1, day);
+  return isNaN(d.getTime()) ? today() : d;
+}
+
+function formatDisplay(str) {
+  if (!str) return '';
+  return parseYMD(str).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+function DatePickerField({ value, onChange, editable }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const minDate = today();
+  const selectedDate = parseYMD(value);
+
+  if (Platform.OS === 'web') {
+    return (
+      <input
+        type="date"
+        value={value}
+        min={toYMD(minDate)}
+        disabled={!editable}
+        onChange={(e) => { if (editable) onChange(e.target.value); }}
+        style={{
+          backgroundColor: editable ? '#F9FAFB' : '#F3F4F6',
+          border: '1px solid #E5E7EB',
+          borderRadius: 12,
+          padding: '12px 14px',
+          fontSize: 15,
+          color: editable ? '#1A1A2E' : '#9CA3AF',
+          width: '100%',
+          outline: 'none',
+          boxSizing: 'border-box',
+          cursor: editable ? 'pointer' : 'default',
+          fontFamily: 'inherit',
+        }}
+      />
+    );
+  }
+
+  return (
+    <>
+      <TouchableOpacity
+        style={[datePickerStyles.field, !editable && datePickerStyles.fieldReadOnly]}
+        onPress={() => { if (editable) setShowPicker(true); }}
+        activeOpacity={editable ? 0.7 : 1}
+      >
+        <Text style={[datePickerStyles.fieldText, !value && datePickerStyles.placeholder]}>
+          {value ? formatDisplay(value) : 'Select date'}
+        </Text>
+        {editable && <Text style={datePickerStyles.calendarIcon}>📅</Text>}
+      </TouchableOpacity>
+
+      {/* Android: picker renders as a native dialog when shown */}
+      {Platform.OS === 'android' && showPicker && (
+        <DateTimePicker
+          value={selectedDate}
+          mode="date"
+          display="default"
+          minimumDate={minDate}
+          onChange={(event, picked) => {
+            setShowPicker(false);
+            if (event.type === 'set' && picked) onChange(toYMD(picked));
+          }}
+        />
+      )}
+
+      {/* iOS: show picker inside a Modal with a Done button */}
+      {Platform.OS === 'ios' && (
+        <Modal
+          visible={showPicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowPicker(false)}
+        >
+          <View style={datePickerStyles.modalOverlay}>
+            <View style={datePickerStyles.modalSheet}>
+              <View style={datePickerStyles.modalHeader}>
+                <TouchableOpacity onPress={() => setShowPicker(false)}>
+                  <Text style={datePickerStyles.doneButton}>Done</Text>
+                </TouchableOpacity>
+              </View>
+              <DateTimePicker
+                value={selectedDate}
+                mode="date"
+                display="spinner"
+                minimumDate={minDate}
+                onChange={(_, picked) => { if (picked) onChange(toYMD(picked)); }}
+                style={{ width: '100%' }}
+              />
+            </View>
+          </View>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+const datePickerStyles = StyleSheet.create({
+  field: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  fieldReadOnly: { backgroundColor: '#F3F4F6' },
+  fieldText: { fontSize: 15, color: '#1A1A2E', flex: 1 },
+  placeholder: { color: '#9CA3AF' },
+  calendarIcon: { fontSize: 16, marginLeft: 8 },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  modalSheet: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 30,
+  },
+  modalHeader: {
+    alignItems: 'flex-end',
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  doneButton: { fontSize: 16, color: '#4A90D9', fontWeight: '700' },
+});
 
 function Section({ title, open, onToggle, children }) {
   return (
@@ -145,7 +298,6 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
     setSharedWith(prev => prev.filter(e => e !== email));
   }
 
-  // ── Field blocks ────────────────────────────────────────────────────────────
 
   const basicInfoFields = (
     <>
@@ -171,14 +323,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
       />
 
       <Text style={styles.label}>Date</Text>
-      <TextInput
-        style={[styles.input, !isOwner && styles.inputReadOnly]}
-        value={date}
-        onChangeText={setDate}
-        placeholder="e.g. 2026-05-10"
-        placeholderTextColor="#9CA3AF"
-        editable={isOwner}
-      />
+      <DatePickerField value={date} onChange={setDate} editable={isOwner} />
     </>
   );
 
@@ -301,7 +446,6 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
     </>
   );
 
-  // ── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -320,7 +464,6 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
             </View>
           </View>
 
-          {/* MOBILE: collapsible sections */}
           {!isWide && (
             <>
               <Section title="Basic Info" open={openBasicInfo} onToggle={() => setOpenBasicInfo(p => !p)}>
@@ -337,7 +480,6 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
             </>
           )}
 
-          {/* WIDE: two-column layout */}
           {isWide && (
             <View style={styles.columnsWide}>
               <View style={styles.columnWide}>{basicInfoFields}</View>
@@ -361,7 +503,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F0F2F8' },
   content: { padding: 16, paddingBottom: 200, flexGrow: 1 },
 
-  // Owner badge
   ownerBadgeRow: { alignItems: 'flex-start', marginBottom: 14 },
   ownerBadge: { borderRadius: 20, paddingVertical: 5, paddingHorizontal: 14 },
   ownerBadgeMine: { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#BFDBFE' },
@@ -370,7 +511,6 @@ const styles = StyleSheet.create({
   ownerBadgeTextMine: { color: '#1D4ED8' },
   ownerBadgeTextShared: { color: '#D97706' },
 
-  // Collapsible section
   section: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -398,11 +538,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#F3F4F6',
   },
 
-  // Two-column layout (wide)
   columnsWide: { flexDirection: 'row', gap: 20, alignItems: 'flex-start' },
   columnWide: { flex: 1 },
 
-  // Fields
   label: { fontSize: 13, fontWeight: '600', color: '#374151', marginTop: 16, marginBottom: 6 },
   labelFirst: { marginTop: 8 },
   input: {
@@ -419,7 +557,6 @@ const styles = StyleSheet.create({
   inputReadOnly: { backgroundColor: '#F3F4F6', color: '#9CA3AF' },
   fieldError: { color: '#DC2626', fontSize: 12, marginTop: 4 },
 
-  // Status
   statusBadge: { borderRadius: 12, padding: 12, alignItems: 'center' },
   statusButton: { borderRadius: 12, padding: 14, alignItems: 'center' },
   statusCompleted: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#86EFAC' },
@@ -429,7 +566,6 @@ const styles = StyleSheet.create({
   statusTextGreen: { color: '#16A34A' },
   statusTextOrange: { color: '#D97706' },
 
-  // Completion list
   completionList: {
     backgroundColor: '#F9FAFB',
     borderRadius: 12,
@@ -452,7 +588,6 @@ const styles = StyleSheet.create({
   completionBadgePending: { backgroundColor: '#FEF3C7' },
   completionBadgeText: { fontSize: 11, fontWeight: '700' },
 
-  // Sharing
   shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   shareInput: { flex: 1 },
   addUserButton: {
@@ -481,7 +616,6 @@ const styles = StyleSheet.create({
   chipRemove: { fontSize: 11, color: '#4A90D9', fontWeight: '700' },
   shareEmptyHint: { fontSize: 13, color: '#9CA3AF', marginTop: 8 },
 
-  // Actions
   loadingText: { textAlign: 'center', color: '#9CA3AF', marginTop: 16, fontSize: 14 },
   error: { color: '#DC2626', fontSize: 13, marginTop: 12, textAlign: 'center' },
   saveButton: {
