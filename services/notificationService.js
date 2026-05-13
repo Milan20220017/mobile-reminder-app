@@ -1,36 +1,77 @@
 import * as Notifications from 'expo-notifications';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
-// Notification IDs are local to each device and must not be stored in Firebase.
-// We persist them in SecureStore keyed by reminderId so we can cancel/reschedule.
 const NOTIF_KEY_PREFIX = 'notif_';
 
-// ─── Foreground handler ───────────────────────────────────────────────────────
-// Show alerts even when the app is open.
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+// ─── Environment detection ────────────────────────────────────────────────────
+//
+// Local scheduled notifications work in:
+//   • Development builds  (Android + iOS)
+//   • Expo Go on iOS only (the iOS Expo Go client still includes the local-
+//     notifications native module)
+//
+// They do NOT work in:
+//   • Expo Go on Android — the expo-notifications native module was removed
+//     from the Android Expo Go client starting with SDK 53.
+//   • Web
+//
+// We detect Expo Go via Constants.executionEnvironment === 'storeClient'.
+// All notification code is gated on this flag so the app never touches the
+// missing native module and never crashes or logs the SDK-53 warning.
+
+const isExpoGo =
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+export const notificationsAvailable =
+  Platform.OS !== 'web' && !(Platform.OS === 'android' && isExpoGo);
+
+// Register the foreground display handler only when the native module exists.
+// Calling setNotificationHandler in Expo Go on Android is what triggers the
+// "remote notifications removed" console error, so we guard it here.
+if (notificationsAvailable) {
+  try {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+  } catch (err) {
+    console.warn('[Notifications] setNotificationHandler failed:', err.message);
+  }
+}
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
-// Call once on app startup. Sets up the Android channel and requests permission.
-export async function initNotifications() {
-  if (Platform.OS === 'web') return;
+// Call once on app start. Creates the Android channel and requests permission.
+// Safe no-op when notifications are unavailable.
 
-  // Android requires a notification channel.
+export async function initNotifications() {
+  if (!notificationsAvailable) {
+    const reason =
+      Platform.OS === 'android' && isExpoGo
+        ? 'Expo Go on Android does not support local notifications (SDK 53+). ' +
+          'Switch to a development build for notification support.'
+        : 'Notifications are disabled on web.';
+    console.log('[Notifications] Skipped —', reason);
+    return;
+  }
+
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('reminders', {
-      name: 'Reminders',
-      importance: Notifications.AndroidImportance.HIGH,
-      vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#4A90D9',
-      sound: 'default',
-    });
-    console.log('[Notifications] Android channel ready');
+    try {
+      await Notifications.setNotificationChannelAsync('reminders', {
+        name: 'Reminders',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#4A90D9',
+        sound: 'default',
+      });
+      console.log('[Notifications] Android channel ready');
+    } catch (err) {
+      console.warn('[Notifications] Failed to create Android channel:', err.message);
+    }
   }
 
   try {
@@ -42,7 +83,7 @@ export async function initNotifications() {
     const { status } = await Notifications.requestPermissionsAsync();
     console.log('[Notifications] Permission result:', status);
   } catch (err) {
-    console.error('[Notifications] Failed to request permissions:', err);
+    console.warn('[Notifications] Failed to request permissions:', err.message);
   }
 }
 
@@ -68,17 +109,17 @@ async function deleteStoredNotifId(reminderId) {
   try {
     await SecureStore.deleteItemAsync(`${NOTIF_KEY_PREFIX}${reminderId}`);
   } catch {
-    // Key may not exist; safe to ignore.
+    // Key may not exist — safe to ignore.
   }
 }
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
-// Schedules a notification for `reminder.date` + `reminder.time` (defaults to
-// 09:00 if time is omitted). Cancels any previously stored notification for the
-// same reminderId first. Does nothing on web or when date is absent/past.
+// Schedules a local notification for reminder.date + reminder.time (defaults
+// to 09:00 when time is absent). Cancels any existing notification for the
+// same reminderId first. Silent no-op when notifications are unavailable.
 
 export async function scheduleReminderNotification(reminder) {
-  if (Platform.OS === 'web') return;
+  if (!notificationsAvailable) return;
   if (!reminder.id || !reminder.date) return;
 
   // Always cancel whatever was scheduled before for this reminder.
@@ -125,9 +166,10 @@ export async function scheduleReminderNotification(reminder) {
 
 // ─── Cancel ───────────────────────────────────────────────────────────────────
 // Cancels the scheduled notification for a reminder and removes the stored ID.
+// Idempotent — safe to call even when no notification exists.
 
 export async function cancelReminderNotification(reminderId) {
-  if (Platform.OS === 'web' || !reminderId) return;
+  if (!notificationsAvailable || !reminderId) return;
 
   const notifId = await getStoredNotifId(reminderId);
   if (!notifId) return;
@@ -136,7 +178,7 @@ export async function cancelReminderNotification(reminderId) {
     await Notifications.cancelScheduledNotificationAsync(notifId);
     console.log(`[Notifications] Cancelled notifId=${notifId} for reminderId=${reminderId}`);
   } catch (err) {
-    // The notification may have already fired or been dismissed — not fatal.
+    // The notification may have already fired — not fatal.
     console.warn('[Notifications] Cancel warning:', err.message);
   } finally {
     await deleteStoredNotifId(reminderId);
