@@ -9,6 +9,11 @@ import AddReminderScreen from './screens/AddReminderScreen';
 import ReminderDetailsScreen from './screens/ReminderDetailsScreen';
 
 import { getReminders, addReminder, updateReminder, deleteReminder } from './services/reminderService';
+import {
+  initNotifications,
+  scheduleReminderNotification,
+  cancelReminderNotification,
+} from './services/notificationService';
 
 const Stack = createStackNavigator();
 
@@ -16,6 +21,10 @@ export default function App() {
   const [reminders, setReminders] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [loadingReminders, setLoadingReminders] = useState(false);
+
+  useEffect(() => {
+    initNotifications();
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -31,16 +40,22 @@ export default function App() {
   }
 
   async function handleAddReminder(reminder) {
-    await addReminder(reminder);
+    // addReminder returns the new Firebase key; pass it as id for notification storage.
+    const reminderId = await addReminder(reminder);
+    await scheduleReminderNotification({ ...reminder, id: reminderId });
     await loadReminders();
   }
 
   async function handleUpdateReminder(id, updatedReminder) {
+    // cancelReminderNotification is idempotent — safe to call even if no notification exists.
+    await cancelReminderNotification(id);
     await updateReminder(id, updatedReminder);
+    await scheduleReminderNotification({ ...updatedReminder, id });
     await loadReminders();
   }
 
   async function handleDeleteReminder(id) {
+    await cancelReminderNotification(id);
     await deleteReminder(id);
     await loadReminders();
   }

@@ -1,167 +1,15 @@
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   SafeAreaView, KeyboardAvoidingView, Platform,
-  StyleSheet, Alert, useWindowDimensions, ActivityIndicator, Modal,
+  StyleSheet, Alert, useWindowDimensions, ActivityIndicator,
 } from 'react-native';
 import { useState } from 'react';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { findUserByEmail } from '../services/userService';
+import { DatePickerField, TimePickerField } from '../components/DateTimeFields';
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
-
-function toYMD(d) {
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-');
-}
-
-function today() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function parseYMD(str) {
-  if (!str) return today();
-  const [y, m, day] = str.split('-').map(Number);
-  const d = new Date(y, m - 1, day);
-  return isNaN(d.getTime()) ? today() : d;
-}
-
-function formatDisplay(str) {
-  if (!str) return '';
-  return parseYMD(str).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-}
-
-function DatePickerField({ value, onChange, editable }) {
-  const [showPicker, setShowPicker] = useState(false);
-  const minDate = today();
-  const selectedDate = parseYMD(value);
-
-  if (Platform.OS === 'web') {
-    return (
-      <input
-        type="date"
-        value={value}
-        min={toYMD(minDate)}
-        disabled={!editable}
-        onChange={(e) => { if (editable) onChange(e.target.value); }}
-        style={{
-          backgroundColor: editable ? '#F9FAFB' : '#F3F4F6',
-          border: '1px solid #E5E7EB',
-          borderRadius: 12,
-          padding: '12px 14px',
-          fontSize: 15,
-          color: editable ? '#1A1A2E' : '#9CA3AF',
-          width: '100%',
-          outline: 'none',
-          boxSizing: 'border-box',
-          cursor: editable ? 'pointer' : 'default',
-          fontFamily: 'inherit',
-        }}
-      />
-    );
-  }
-
-  return (
-    <>
-      <TouchableOpacity
-        style={[datePickerStyles.field, !editable && datePickerStyles.fieldReadOnly]}
-        onPress={() => { if (editable) setShowPicker(true); }}
-        activeOpacity={editable ? 0.7 : 1}
-      >
-        <Text style={[datePickerStyles.fieldText, !value && datePickerStyles.placeholder]}>
-          {value ? formatDisplay(value) : 'Select date'}
-        </Text>
-        {editable && <Text style={datePickerStyles.calendarIcon}>📅</Text>}
-      </TouchableOpacity>
-
-      {/* Android: picker renders as a native dialog when shown */}
-      {Platform.OS === 'android' && showPicker && (
-        <DateTimePicker
-          value={selectedDate}
-          mode="date"
-          display="default"
-          minimumDate={minDate}
-          onChange={(event, picked) => {
-            setShowPicker(false);
-            if (event.type === 'set' && picked) onChange(toYMD(picked));
-          }}
-        />
-      )}
-
-      {/* iOS: show picker inside a Modal with a Done button */}
-      {Platform.OS === 'ios' && (
-        <Modal
-          visible={showPicker}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setShowPicker(false)}
-        >
-          <View style={datePickerStyles.modalOverlay}>
-            <View style={datePickerStyles.modalSheet}>
-              <View style={datePickerStyles.modalHeader}>
-                <TouchableOpacity onPress={() => setShowPicker(false)}>
-                  <Text style={datePickerStyles.doneButton}>Done</Text>
-                </TouchableOpacity>
-              </View>
-              <DateTimePicker
-                value={selectedDate}
-                mode="date"
-                display="spinner"
-                minimumDate={minDate}
-                onChange={(_, picked) => { if (picked) onChange(toYMD(picked)); }}
-                style={{ width: '100%' }}
-              />
-            </View>
-          </View>
-        </Modal>
-      )}
-    </>
-  );
-}
-
-const datePickerStyles = StyleSheet.create({
-  field: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  fieldReadOnly: { backgroundColor: '#F3F4F6' },
-  fieldText: { fontSize: 15, color: '#1A1A2E', flex: 1 },
-  placeholder: { color: '#9CA3AF' },
-  calendarIcon: { fontSize: 16, marginLeft: 8 },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-  },
-  modalSheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingBottom: 30,
-  },
-  modalHeader: {
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
-  },
-  doneButton: { fontSize: 16, color: '#4A90D9', fontWeight: '700' },
-});
 
 function Section({ title, open, onToggle, children }) {
   return (
@@ -184,6 +32,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
   const [titleError, setTitleError] = useState('');
   const [description, setDescription] = useState(reminder.description || '');
   const [date, setDate] = useState(reminder.date || '');
+  const [time, setTime] = useState(reminder.time || '');
   const [completedBy, setCompletedBy] = useState(reminder.completedBy || {});
   const [sharedWith, setSharedWith] = useState(reminder.sharedWith || []);
   const [shareInput, setShareInput] = useState('');
@@ -230,6 +79,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
           title: title.trim(),
           description: description.trim(),
           date: date.trim(),
+          time: time.trim(),
           ownerId: reminder.ownerId,
           ownerEmail,
           sharedWith,
@@ -240,6 +90,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
           title: reminder.title,
           description: reminder.description,
           date: reminder.date,
+          time: reminder.time || '',
           ownerId: reminder.ownerId,
           ownerEmail: reminder.ownerEmail,
           sharedWith: reminder.sharedWith,
@@ -324,6 +175,9 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
 
       <Text style={styles.label}>Date</Text>
       <DatePickerField value={date} onChange={setDate} editable={isOwner} />
+
+      <Text style={styles.label}>Time</Text>
+      <TimePickerField value={time} onChange={setTime} editable={isOwner} />
     </>
   );
 

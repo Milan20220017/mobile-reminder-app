@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useState } from 'react';
 import { findUserByEmail } from '../services/userService';
+import { DatePickerField, TimePickerField } from '../components/DateTimeFields';
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -14,6 +15,7 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
+  const [time, setTime] = useState('');
   const [sharedWith, setSharedWith] = useState([]);
   const [shareInput, setShareInput] = useState('');
   const [shareError, setShareError] = useState('');
@@ -55,7 +57,16 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
     try {
       setLoading(true);
       setError('');
-      await onAdd({ title: title.trim(), description: description.trim(), date: date.trim(), ownerId: currentUser.id, ownerEmail, sharedWith, completedBy });
+      await onAdd({
+        title: title.trim(),
+        description: description.trim(),
+        date: date.trim(),
+        time: time.trim(),
+        ownerId: currentUser.id,
+        ownerEmail,
+        sharedWith,
+        completedBy,
+      });
       navigation.goBack();
     } catch (e) {
       setError('Failed to save reminder. Please try again.');
@@ -100,13 +111,10 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
         />
 
         <Text style={styles.label}>Date</Text>
-        <TextInput
-          style={styles.input}
-          value={date}
-          onChangeText={setDate}
-          placeholder="e.g. 2026-05-10"
-          placeholderTextColor="#9CA3AF"
-        />
+        <DatePickerField value={date} onChange={setDate} editable={true} />
+
+        <Text style={styles.label}>Time</Text>
+        <TimePickerField value={time} onChange={setTime} editable={true} />
       </View>
 
       <View style={styles.card}>
