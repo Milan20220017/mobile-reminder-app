@@ -2,6 +2,7 @@ import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
   SafeAreaView, Platform,
 } from 'react-native';
+import { getReminderStatus } from '../utils/reminderUtils';
 
 export default function RemindersScreen({ navigation, reminders, currentUser, loading, onLogout }) {
   const visibleReminders = reminders.filter(
@@ -45,26 +46,45 @@ export default function RemindersScreen({ navigation, reminders, currentUser, lo
           }
           renderItem={({ item }) => {
             const isOwner = item.ownerId === currentUser.id;
-            const completedValues = Object.values(item.completedBy || {});
-            const fullyCompleted = completedValues.length > 0 && completedValues.every(v => v === true);
+            const status = getReminderStatus(item);
             const sharedWith = item.sharedWith || [];
+
+            const cardBorderStyle =
+              status === 'finished' ? styles.cardCompleted :
+              status === 'missed'   ? styles.cardMissed :
+                                      styles.cardPending;
+
+            const badgeStyle =
+              status === 'finished' ? styles.badgeGreen :
+              status === 'missed'   ? styles.badgeRed :
+                                      styles.badgeOrange;
+
+            const badgeTextStyle =
+              status === 'finished' ? styles.badgeTextGreen :
+              status === 'missed'   ? styles.badgeTextRed :
+                                      styles.badgeTextOrange;
+
+            const badgeLabel =
+              status === 'finished' ? '✓ Finished' :
+              status === 'missed'   ? '✕ Missed' :
+                                      '○ Pending';
 
             return (
               <TouchableOpacity
-                style={[styles.card, fullyCompleted ? styles.cardCompleted : styles.cardPending]}
+                style={[styles.card, cardBorderStyle]}
                 onPress={() => navigation.navigate('ReminderDetails', { reminder: item })}
                 activeOpacity={0.75}
               >
                 <View style={styles.cardHeader}>
                   <Text
-                    style={[styles.cardTitle, fullyCompleted && styles.cardTitleDone]}
+                    style={[styles.cardTitle, status === 'finished' && styles.cardTitleDone]}
                     numberOfLines={2}
                   >
                     {item.title}
                   </Text>
-                  <View style={[styles.badge, fullyCompleted ? styles.badgeGreen : styles.badgeOrange]}>
-                    <Text style={[styles.badgeText, fullyCompleted ? styles.badgeTextGreen : styles.badgeTextOrange]}>
-                      {fullyCompleted ? '✓ Done' : '○ Pending'}
+                  <View style={[styles.badge, badgeStyle]}>
+                    <Text style={[styles.badgeText, badgeTextStyle]}>
+                      {badgeLabel}
                     </Text>
                   </View>
                 </View>
@@ -156,6 +176,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   cardCompleted: { borderLeftColor: '#16A34A' },
+  cardMissed: { borderLeftColor: '#DC2626' },
   cardPending: { borderLeftColor: '#D97706' },
 
   cardHeader: {
@@ -171,9 +192,11 @@ const styles = StyleSheet.create({
   badge: { borderRadius: 20, paddingVertical: 3, paddingHorizontal: 10, flexShrink: 0 },
   badgeGreen: { backgroundColor: '#DCFCE7' },
   badgeOrange: { backgroundColor: '#FEF3C7' },
+  badgeRed: { backgroundColor: '#FEE2E2' },
   badgeText: { fontSize: 11, fontWeight: '700' },
   badgeTextGreen: { color: '#16A34A' },
   badgeTextOrange: { color: '#D97706' },
+  badgeTextRed: { color: '#DC2626' },
 
   cardDescription: { fontSize: 13, color: '#6B7280', marginBottom: 10, lineHeight: 19 },
 

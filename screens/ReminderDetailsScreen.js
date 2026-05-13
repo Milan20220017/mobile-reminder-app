@@ -6,6 +6,7 @@ import {
 import { useState } from 'react';
 import { findUserByEmail } from '../services/userService';
 import { DatePickerField, TimePickerField } from '../components/DateTimeFields';
+import { getReminderStatus } from '../utils/reminderUtils';
 
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -48,8 +49,10 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
   const isOwner = reminder.ownerId === currentUser.id;
 
   const myDone = completedBy[currentUser.email] || false;
-  const allValues = Object.values(completedBy);
-  const fullyCompleted = allValues.length > 0 && allValues.every(v => v === true);
+
+  // Derived from local state so the badge updates instantly when the user
+  // toggles their own status, before they hit Save.
+  const overallStatus = getReminderStatus({ completedBy, date });
 
   function toggleMyStatus() {
     setCompletedBy(prev => ({ ...prev, [currentUser.email]: !prev[currentUser.email] }));
@@ -184,9 +187,21 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
   const completionFields = (
     <>
       <Text style={[styles.label, styles.labelFirst]}>Overall Status</Text>
-      <View style={[styles.statusBadge, fullyCompleted ? styles.statusCompleted : styles.statusPending]}>
-        <Text style={[styles.statusBadgeText, fullyCompleted ? styles.statusTextGreen : styles.statusTextOrange]}>
-          {fullyCompleted ? '✓  Fully Completed' : '○  Pending'}
+      <View style={[
+        styles.statusBadge,
+        overallStatus === 'finished' ? styles.statusCompleted :
+        overallStatus === 'missed'   ? styles.statusMissed :
+                                       styles.statusPending,
+      ]}>
+        <Text style={[
+          styles.statusBadgeText,
+          overallStatus === 'finished' ? styles.statusTextGreen :
+          overallStatus === 'missed'   ? styles.statusTextRed :
+                                         styles.statusTextOrange,
+        ]}>
+          {overallStatus === 'finished' ? '✓  Finished' :
+           overallStatus === 'missed'   ? '✕  Missed' :
+                                          '○  Pending'}
         </Text>
       </View>
 
@@ -197,7 +212,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
         activeOpacity={0.75}
       >
         <Text style={[styles.statusButtonText, myDone ? styles.statusTextGreen : styles.statusTextOrange]}>
-          {myDone ? '✓  Marked as done — tap to undo' : '○  Tap to mark as done'}
+          {myDone ? '✓  Marked as finished — tap to undo' : '○  Tap to mark as finished'}
         </Text>
       </TouchableOpacity>
 
@@ -211,7 +226,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
             <Text style={styles.completionEmail} numberOfLines={1}>{email}</Text>
             <View style={[styles.completionBadge, done ? styles.completionBadgeDone : styles.completionBadgePending]}>
               <Text style={[styles.completionBadgeText, done ? styles.statusTextGreen : styles.statusTextOrange]}>
-                {done ? '✓ Done' : '○ Pending'}
+                {done ? '✓ Finished' : '○ Pending'}
               </Text>
             </View>
           </View>
@@ -414,10 +429,12 @@ const styles = StyleSheet.create({
   statusBadge: { borderRadius: 12, padding: 12, alignItems: 'center' },
   statusButton: { borderRadius: 12, padding: 14, alignItems: 'center' },
   statusCompleted: { backgroundColor: '#DCFCE7', borderWidth: 1, borderColor: '#86EFAC' },
+  statusMissed: { backgroundColor: '#FEE2E2', borderWidth: 1, borderColor: '#FECACA' },
   statusPending: { backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A' },
   statusBadgeText: { fontSize: 14, fontWeight: '700' },
   statusButtonText: { fontSize: 14, fontWeight: '600' },
   statusTextGreen: { color: '#16A34A' },
+  statusTextRed: { color: '#DC2626' },
   statusTextOrange: { color: '#D97706' },
 
   completionList: {
