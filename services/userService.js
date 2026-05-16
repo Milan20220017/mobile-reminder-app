@@ -1,8 +1,8 @@
 import { DATABASE_URL } from '../firebaseConfig';
 
-export async function saveUser(uid, email) {
+export async function saveUser(uid, email, token) {
   const normalized = email.trim().toLowerCase();
-  const response = await fetch(`${DATABASE_URL}/users/${uid}.json`, {
+  const response = await fetch(`${DATABASE_URL}/users/${uid}.json?auth=${token}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uid, email: normalized }),
@@ -14,11 +14,11 @@ export async function saveUser(uid, email) {
   }
 }
 
-export async function findUserByEmail(email) {
+export async function findUserByEmail(email, token) {
   const normalized = email.trim().toLowerCase();
   console.log('[findUserByEmail] Looking for email:', normalized);
 
-  const response = await fetch(`${DATABASE_URL}/users.json`);
+  const response = await fetch(`${DATABASE_URL}/users.json?auth=${token}`);
   if (!response.ok) {
     console.warn('[findUserByEmail] Failed to fetch /users.json, status:', response.status);
     return null;

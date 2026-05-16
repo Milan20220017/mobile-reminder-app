@@ -34,27 +34,27 @@ export default function App() {
 
   async function loadReminders() {
     setLoadingReminders(true);
-    const data = await getReminders();
+    const data = await getReminders(currentUser.token);
     setReminders(data);
     setLoadingReminders(false);
   }
 
   async function handleAddReminder(reminder) {
-    const reminderId = await addReminder(reminder);
+    const reminderId = await addReminder(reminder, currentUser.token);
     await scheduleReminderNotification({ ...reminder, id: reminderId });
     await loadReminders();
   }
 
   async function handleUpdateReminder(id, updatedReminder) {
     await cancelReminderNotification(id);
-    await updateReminder(id, updatedReminder);
+    await updateReminder(id, updatedReminder, currentUser.token);
     await scheduleReminderNotification({ ...updatedReminder, id });
     await loadReminders();
   }
 
   async function handleDeleteReminder(id) {
     await cancelReminderNotification(id);
-    await deleteReminder(id);
+    await deleteReminder(id, currentUser.token);
     await loadReminders();
   }
 

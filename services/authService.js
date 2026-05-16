@@ -28,10 +28,10 @@ export async function register(email, password) {
   });
   const data = await response.json();
   if (data.error) throw new Error(friendlyError(data.error.message));
-  await saveUser(data.localId, data.email.toLowerCase()).catch((e) => {
+  await saveUser(data.localId, data.email.toLowerCase(), data.idToken).catch((e) => {
     console.warn('[register] saveUser failed:', e);
   });
-  return { id: data.localId, email: data.email };
+  return { id: data.localId, email: data.email, token: data.idToken };
 }
 
 export async function login(email, password) {
@@ -42,5 +42,5 @@ export async function login(email, password) {
   });
   const data = await response.json();
   if (data.error) throw new Error(friendlyError(data.error.message));
-  return { id: data.localId, email: data.email };
+  return { id: data.localId, email: data.email, token: data.idToken };
 }

@@ -135,7 +135,7 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
     if (sharedWith.includes(email)) { setShareError('This user has already been added.'); return; }
     try {
       setShareLoading(true);
-      const user = await findUserByEmail(email);
+      const user = await findUserByEmail(email, currentUser.token);
       if (!user) { setShareError('User with this email does not exist.'); return; }
       setSharedWith(prev => [...prev, email]);
       setShareInput('');
