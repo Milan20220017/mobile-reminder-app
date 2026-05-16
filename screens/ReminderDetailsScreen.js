@@ -24,7 +24,7 @@ function Section({ title, open, onToggle, children }) {
   );
 }
 
-export default function ReminderDetailsScreen({ route, navigation, onUpdate, onDelete, currentUser }) {
+export default function ReminderDetailsScreen({ route, navigation, onUpdate, onDelete, currentUser, getToken }) {
   const { reminder } = route.params;
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
@@ -135,7 +135,8 @@ export default function ReminderDetailsScreen({ route, navigation, onUpdate, onD
     if (sharedWith.includes(email)) { setShareError('This user has already been added.'); return; }
     try {
       setShareLoading(true);
-      const user = await findUserByEmail(email);
+      const token = await getToken();
+      const user = await findUserByEmail(email, token);
       if (!user) { setShareError('User with this email does not exist.'); return; }
       setSharedWith(prev => [...prev, email]);
       setShareInput('');

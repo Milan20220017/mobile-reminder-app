@@ -35,8 +35,8 @@ async function checkResponse(response) {
   }
 }
 
-export async function getReminders() {
-  const response = await fetch(`${DATABASE_URL}/reminders.json`);
+export async function getReminders(idToken) {
+  const response = await fetch(`${DATABASE_URL}/reminders.json?auth=${idToken}`);
   await checkResponse(response);
   const data = await response.json();
 
@@ -50,8 +50,8 @@ export async function getReminders() {
   }));
 }
 
-export async function addReminder(reminder) {
-  const response = await fetch(`${DATABASE_URL}/reminders.json`, {
+export async function addReminder(reminder, idToken) {
+  const response = await fetch(`${DATABASE_URL}/reminders.json?auth=${idToken}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -64,8 +64,8 @@ export async function addReminder(reminder) {
   return data.name;
 }
 
-export async function updateReminder(id, reminder) {
-  const response = await fetch(`${DATABASE_URL}/reminders/${id}.json`, {
+export async function updateReminder(id, reminder, idToken) {
+  const response = await fetch(`${DATABASE_URL}/reminders/${id}.json?auth=${idToken}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -76,8 +76,8 @@ export async function updateReminder(id, reminder) {
   await checkResponse(response);
 }
 
-export async function deleteReminder(id) {
-  const response = await fetch(`${DATABASE_URL}/reminders/${id}.json`, {
+export async function deleteReminder(id, idToken) {
+  const response = await fetch(`${DATABASE_URL}/reminders/${id}.json?auth=${idToken}`, {
     method: 'DELETE',
   });
   await checkResponse(response);

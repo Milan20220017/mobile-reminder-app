@@ -5,6 +5,7 @@ node_modules/
 
 # Expo
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
@@ -30,8 +31,18 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
+# Windows
+Thumbs.db
+desktop.ini
+
+# local env files — never commit Firebase keys or secrets
+.env
+.env.*
 .env*.local
+
+# Firebase native config files
+android/app/google-services.json
+ios/GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo

@@ -11,7 +11,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
+export default function AddReminderScreen({ navigation, onAdd, currentUser, getToken }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
@@ -33,7 +33,8 @@ export default function AddReminderScreen({ navigation, onAdd, currentUser }) {
     if (sharedWith.includes(email)) { setShareError('This user has already been added.'); return; }
     try {
       setShareLoading(true);
-      const user = await findUserByEmail(email);
+      const token = await getToken();
+      const user = await findUserByEmail(email, token);
       if (!user) { setShareError('User with this email does not exist.'); return; }
       setSharedWith(prev => [...prev, email]);
       setShareInput('');

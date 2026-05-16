@@ -1,8 +1,8 @@
 import { DATABASE_URL } from '../firebaseConfig';
 
-export async function saveUser(uid, email) {
+export async function saveUser(uid, email, idToken) {
   const normalized = email.trim().toLowerCase();
-  const response = await fetch(`${DATABASE_URL}/users/${uid}.json`, {
+  const response = await fetch(`${DATABASE_URL}/users/${uid}.json?auth=${idToken}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ uid, email: normalized }),
@@ -14,28 +14,19 @@ export async function saveUser(uid, email) {
   }
 }
 
-export async function findUserByEmail(email) {
+export async function findUserByEmail(email, idToken) {
   const normalized = email.trim().toLowerCase();
-  console.log('[findUserByEmail] Looking for email:', normalized);
 
-  const response = await fetch(`${DATABASE_URL}/users.json`);
+  const response = await fetch(`${DATABASE_URL}/users.json?auth=${idToken}`);
   if (!response.ok) {
     console.warn('[findUserByEmail] Failed to fetch /users.json, status:', response.status);
     return null;
   }
 
   const data = await response.json();
-  console.log('[findUserByEmail] Users loaded from /users:', data);
+  if (!data) return null;
 
-  if (!data) {
-    console.log('[findUserByEmail] /users is empty or null');
-    return null;
-  }
-
-  const match = Object.values(data).find(
+  return Object.values(data).find(
     user => user.email && user.email.trim().toLowerCase() === normalized
   ) || null;
-
-  console.log('[findUserByEmail] Match found:', match);
-  return match;
 }
